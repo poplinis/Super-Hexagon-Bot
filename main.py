@@ -5,7 +5,7 @@ import time
 import os
 
 
-os.chdir("D:\\Users\\Games\\Documents\\Python\\super-hexagon-bot\\pics")
+os.chdir(".\\pics")
 
 # TODO: Find actual center
 # TODO: Analyze cases where it fails to locate player
