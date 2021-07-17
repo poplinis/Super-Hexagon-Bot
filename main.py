@@ -74,7 +74,7 @@ with mss() as sct:
         
         # Find contours in image, used to detect the player and obstacles
         contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                
+
         # Convert this image back to color so that the contours can be visualized in color
         img = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR)
 
@@ -86,19 +86,23 @@ with mss() as sct:
             centerHex = False
             
             # Vertical limits on searching for the player
-            paddingMax = 175+200
-            paddingMin = 5+99
+            # TODO: Make these not magic numbers
+            paddingMax = 315 - 40
+            cv2.line(img, (0, paddingMax), (monitor["width"], paddingMax), colors[0])
+            paddingMin = 105
+            cv2.line(img, (0, paddingMin), (monitor["width"], paddingMin), colors[0])
             
             # Height method
             # Attempt to detect the player and the center hexagon based on their size
-            tempIndex = 0
-            
             # For each contour...
             for i in range(len(contours)): 
+                current_contour = np.squeeze(np.array(contours[i]), axis=1) # Squeeze vertices down to a nx2 array, 
+                                                                            # each row is a point, coloumn 0 is x, column 1 is y
+
                 # If none of the contour's vertices exceed the top limit...
-                if not (contours[i][:]>paddingMax).any(): 
+                if not (current_contour[:, 1]>paddingMax).any(): 
                     # If none of the contour's vertices go below the bottom limit...
-                    if not (contours[i][:]<paddingMin).any(): 
+                    if not (current_contour[:, 1]<paddingMin).any(): 
                         # Get the width and height of the bounding rectangle for the current contour
                         tempSpan = np.ptp(contours[i], axis=0)[0]
                         spanX = tempSpan[0] # Width
@@ -114,7 +118,7 @@ with mss() as sct:
             # If the player has been found                     
             if type(player) != bool:
                 # Select the vertex list of contours that represent the player
-                contour_player = contours[player]
+                contour_player = contours[playerIndex]
                 # Epsilon used for approximating the polygon, maximum distance between the original curve and its approximation
                 epsPlayer = 0.1*cv2.arcLength(contour_player, True)
                 # Use the RDP Algorithm to simplify the contour
@@ -151,8 +155,8 @@ with mss() as sct:
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
 
                 # Draw boundaries to potentially detect obstacles
-                #if len(cntCenterHexSimple) < 7:
-                #    cv2.drawContours(img, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
+                if len(cntCenterHexSimple) < 7:
+                    cv2.drawContours(img, [np.int32((cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
                 #    cv2.drawContours(img, [np.int32(4.0*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
                 #    cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
                 print("Length cntCenterHex: {}".format(len(cntCenterHex)))
