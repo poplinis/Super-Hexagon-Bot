@@ -175,9 +175,12 @@ with mss() as sct:
 
 
                 # Draw boundaries to potentially detect obstacles
+                # I don't think this method is going to work, makes it too difficult to actually navigate. Better plan is probably to send out
+                # Lines from the center then put together a map of which lanes are free at a given distance then based on that generate a path to follow.
                 if len(cntCenterHexSimple) < 7:
-                    # Draw boundaries on debug imshow for visualization
                     boundary_thickness = 30
+
+                    # Draw boundaries on debug imshow for visualization
                     cv2.drawContours(img, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
                     cv2.drawContours(img, [np.int32(4.3*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
                     cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
@@ -186,34 +189,24 @@ with mss() as sct:
                     boundary1 = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR) * 0
                     boundary2 = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR) * 0
                     boundary3 = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR) * 0
+                    # Transfer each boundary contour to the boundary image, drawContours only works on 3 channel images
                     cv2.drawContours(boundary1, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
                     cv2.drawContours(boundary2, [np.int32(4.3*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
                     cv2.drawContours(boundary3, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-
+                    # Convert back to binarized form
                     boundary1 = cv2.cvtColor(boundary1, cv2.COLOR_BGR2GRAY)
                     boundary2 = cv2.cvtColor(boundary2, cv2.COLOR_BGR2GRAY)
                     boundary3 = cv2.cvtColor(boundary3, cv2.COLOR_BGR2GRAY)
-
                     boundary1[boundary1>0] = 255
                     boundary2[boundary2>0] = 255
                     boundary3[boundary3>0] = 255
-
                     
-                    print("shape of thresh1: ", np.shape(thresh1))
-                    print("length of thresh1: ", len(thresh1))
-                    print("thresh1 at 0, 0: ", thresh1[0, 0])
-                    print("shape of boundary1: ", np.shape(boundary1))
-                    print("length of boundary1: ", len(boundary1))
-                    print("boundary1 at 0, 0: ", boundary1[0, 0])
-                    
-
-                    #boundary1 = cv2.bitwise_or(boundary1.astype(np.uint16), thresh1.astype(np.uint16))
-                    #boundary2 = cv2.bitwise_or(boundary2.astype(np.uint16), thresh1.astype(np.uint16))
-                    #boundary3 = cv2.bitwise_or(boundary3.astype(np.uint16), thresh1.astype(np.uint16))
+                    # Detect collisions between the boundary rings and obstacles
                     boundary1 = cv2.bitwise_and(boundary1, thresh1)
                     boundary2 = cv2.bitwise_and(boundary2, thresh1)
                     boundary3 = cv2.bitwise_and(boundary3, thresh1)
 
+                    # Compose the results for visualization
                     all_boundaries = cv2.bitwise_or(boundary1, boundary2)
                     all_boundaries = cv2.bitwise_or(all_boundaries, boundary3)
                     cv2.imshow("all", all_boundaries)
@@ -225,10 +218,6 @@ with mss() as sct:
                 print("Center hex not found")
         
         # Debugging visualization window
-        #boundary1 = cv2.cvtColor(boundary1, cv2.COLOR_GRAY2BGR)
-        #boundary2 = cv2.cvtColor(boundary2, cv2.COLOR_GRAY2BGR)
-        #boundary3 = cv2.cvtColor(boundary3, cv2.COLOR_GRAY2BGR)
-
         cv2.imshow("FPS Test", img)
         cv2.imshow("Binarized", thresh1)
         cv2.imshow("Det ring 1", boundary1)
@@ -243,7 +232,6 @@ with mss() as sct:
         # Exit on keypress q on imshow window and display success rate of finding player
         if cv2.waitKey(25) & 0xFF == ord("q"):
             cv2.destroyAllWindows()
-            #np.savetxt("boundary1_postconversion.csv", np.ravel(boundary1))
             print("Success Rate: {}".format((counter-fails)/counter))
             break
         
