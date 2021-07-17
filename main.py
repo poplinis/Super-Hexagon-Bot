@@ -87,10 +87,17 @@ with mss() as sct:
             
             # Vertical limits on searching for the player
             # TODO: Make these not magic numbers
-            paddingMax = 315 - 40
-            cv2.line(img, (0, paddingMax), (monitor["width"], paddingMax), colors[0])
-            paddingMin = 105
-            cv2.line(img, (0, paddingMin), (monitor["width"], paddingMin), colors[0])
+            playerLimitBottom = 275
+            cv2.line(img, (0, playerLimitBottom), (monitor["width"], playerLimitBottom), colors[0])
+            playerLimitTop = 105
+            cv2.line(img, (0, playerLimitTop), (monitor["width"], playerLimitTop), colors[0])
+            
+            # Vertical limits on searching for the center hexagon
+            # TODO: Make these not magic numbers
+            centerHexLimitBottom = 245
+            cv2.line(img, (0, centerHexLimitBottom), (monitor["width"], centerHexLimitBottom), colors[3])
+            centerHexLimitTop = 135
+            cv2.line(img, (0, centerHexLimitTop), (monitor["width"], centerHexLimitTop), colors[3])
             
             # Height method
             # Attempt to detect the player and the center hexagon based on their size
@@ -100,9 +107,9 @@ with mss() as sct:
                                                                             # each row is a point, coloumn 0 is x, column 1 is y
 
                 # If none of the contour's vertices exceed the top limit...
-                if not (current_contour[:, 1]>paddingMax).any(): 
+                if not (current_contour[:, 1]>playerLimitBottom).any(): 
                     # If none of the contour's vertices go below the bottom limit...
-                    if not (current_contour[:, 1]<paddingMin).any(): 
+                    if not (current_contour[:, 1]<playerLimitTop).any(): 
                         # Get the width and height of the bounding rectangle for the current contour
                         tempSpan = np.ptp(contours[i], axis=0)[0]
                         spanX = tempSpan[0] # Width
@@ -111,6 +118,15 @@ with mss() as sct:
                         if (spanX < 20 and spanX > 5):
                             playerIndex = i
                             player = i
+                
+                # If none of the contour's vertices exceed the top limit...
+                if not (current_contour[:, 1]>centerHexLimitBottom).any(): 
+                    # If none of the contour's vertices go below the bottom limit...
+                    if not (current_contour[:, 1]<centerHexLimitTop).any(): 
+                        # Get the width and height of the bounding rectangle for the current contour
+                        tempSpan = np.ptp(contours[i], axis=0)[0]
+                        spanX = tempSpan[0] # Width
+                        spanY = tempSpan[1] # Height
                         # Assume the center hex is greater than 40 pixels in x and y
                         if (spanX > 40 and spanY > 40):
                             centerHex = i
