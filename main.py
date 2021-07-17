@@ -10,6 +10,7 @@ os.chdir(".\\pics")
 # TODO: Find actual center
 # TODO: Analyze cases where it fails to locate player
 
+# List of color codes to pull from
 colors = [(255, 0, 0),
           (0, 255, 0),
           (0, 0, 255),
@@ -30,6 +31,7 @@ with mss() as sct:
     monitor_num = 1
     mon = sct.monitors[monitor_num]
      
+    # Define capture area
     monitor = {
         'top': mon['top']+30+50,
         'left': mon['left']+1+95,
@@ -37,39 +39,45 @@ with mss() as sct:
         'height': 420,
         'mon': monitor_num}
     
-    time.sleep(0.0)
     t0 = time.perf_counter()
     times = np.array([])    
+
     counter = 1
     fails = 0
-    #while time.perf_counter()-t0 < 10:
+
     while 1:
         now = time.perf_counter()
         
-        #time.sleep(0.0)
-        cap = np.array(sct.grab(monitor))
-        center = (int(cap.shape[0]/2), int(cap.shape[1]/2))
+        # Capture a frame of the game for analysis
+        screen_cap = np.array(sct.grab(monitor))
+
+        # Estimate the center of the play area, used to normalize color. The colors in Super Hexagon are
+        # Constantly changing, so a sample of the background is used to determine a thresholding value
+        center = (int(screen_cap.shape[0]/2), int(screen_cap.shape[1]/2))
         
-        #cap = cv2.resize(cap, (187, 120), interpolation=cv2.INTER_AREA)
-        gray = cv2.cvtColor(cap, cv2.COLOR_BGR2GRAY)
+        # Convert frame to grayscale - not sure why i do this before thresholding
+        gray = cv2.cvtColor(screen_cap, cv2.COLOR_BGR2GRAY)
+
+        # Apply Gaussian blur, potentially helps with edge detection
         #blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-        blurred = gray
+        blurred = gray # Not actually doing the blur right now
+
+        # Background color of game, used to threshold for edge detection
         base_color = blurred[center]
+
+        # Apply thresholding, if base_color is close to white then do an inverted threshold to keep
+        # Deadspace black and objects of interest white
         if base_color < 200:
             ret, thresh1 = cv2.threshold(blurred, base_color+25, 255, cv2.THRESH_BINARY)
         else:
             ret, thresh1 = cv2.threshold(blurred, base_color-45, 255, cv2.THRESH_BINARY_INV)
         
-        #cv2.circle(thresh1, (290, 194), 65, (255,255,255), -1)
-        #croppedThresh = thresh1[99:279, 200:380]
+        # Find contours in image, used to detect the player and obstacles
         contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                 
-        # if len(contours)>6:
-        #     cv2.destroyAllWindows()
-        #     break
-        
+        # TODO: What does this do?
         img = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR)
-        #img_smol = cv2.cvtColor(croppedThresh, cv2.COLOR_GRAY2BGR)
+
         haveContours = len(contours)>0
         
         # If contours have been identified in the image
@@ -77,84 +85,89 @@ with mss() as sct:
             player = False
             centerHex = False
             
-            
+            # Vertical limits on searching for the player
             paddingMax = 175+200
             paddingMin = 5+99
             
             # Height method
+            # Attempt to detect the player and the center hexagon based on their size
             tempIndex = 0
-            for i in range(len(contours)):
-                if not (contours[i][:]>paddingMax).any():
-                    if not (contours[i][:]<paddingMin).any():
+            
+            # For each contour...
+            for i in range(len(contours)): 
+                # If none of the contour's vertices exceed the top limit...
+                if not (contours[i][:]>paddingMax).any(): 
+                    # If none of the contour's vertices go below the bottom limit...
+                    if not (contours[i][:]<paddingMin).any(): 
+                        # Get the width and height of the bounding rectangle for the current contour
                         tempSpan = np.ptp(contours[i], axis=0)[0]
-                        spanX = tempSpan[0]
-                        spanY = tempSpan[1]
+                        spanX = tempSpan[0] # Width
+                        spanY = tempSpan[1] # Height
+                        # Assume the player is between 5 and 20 pixels in the x
                         if (spanX < 20 and spanX > 5):
-                            #print("Span: {}".format(span))
                             playerIndex = i
                             player = i
+                        # Assume the center hex is greater than 40 pixels in x and y
                         if (spanX > 40 and spanY > 40):
                             centerHex = i
-                            
+
+            # If the player has been found                     
             if type(player) != bool:
-                # P_low = cv2.arcLength(contours[least], True)
-                # A_low = cv2.contourArea(contours[least])
-                # L_low = len(contours[least])
+                # Select the vertex list of contours that represent the player
+                contour_player = contours[player]
+                # Epsilon used for approximating the polygon, maximum distance between the original curve and its approximation
+                epsPlayer = 0.1*cv2.arcLength(contour_player, True)
+                # Use the RDP Algorithm to simplify the contour
+                contour_playerSimple = cv2.approxPolyDP(contour_player, epsPlayer, True)
+
+                # Draw the contours in the visualiztion window for debugging
+                cv2.drawContours(img, [contour_playerSimple], 0, (0, 0, 255), 3)
                 
-                # print("Edges: {}, Perimeter: {}, Area: {}".format(L_low, P_low, A_low))
-                cntPlayer = contours[player]
-                epsPlayer = 0.1*cv2.arcLength(cntPlayer, True)
-                cntPlayerSimple = cv2.approxPolyDP(cntPlayer, epsPlayer, True)
-                cv2.drawContours(img, [cntPlayerSimple], 0, (0, 0, 255), 3)
-                M = cv2.moments(cntPlayer)
+                # Use image moments to find the center of the player
+                M = cv2.moments(contour_player)
                 cX = int(M["m10"] / M["m00"])
                 cY = int(M["m01"] / M["m00"])
                 print("Player at ({}, {})".format(cX, cY))
-                print("Length cntPlayer: {}".format(len(cntPlayer)))
+                print("Length contour_player: {}".format(len(contour_player)))
             else:
                 print("Player Not Found")
                 fails += 1
             
             if type(centerHex) != bool:
+                # Select the vertex list of contours that represent the center hexagon
                 cntCenterHex = contours[centerHex]
+                # Epsilon for the RDP Algorithm
                 epsHex = 0.03*cv2.arcLength(cntCenterHex, True)
+                # Simplify contour of center hexagon
                 cntCenterHexSimple = cv2.approxPolyDP(cntCenterHex, epsHex, True)
+                
+                # Use image moments fo find the center of the hexagon
                 M = cv2.moments(cntCenterHex)
                 cX = int(M["m10"] / M["m00"])
                 cY = int(M["m01"] / M["m00"])
                 print("Center at ({}, {})".format(cX, cY))
+
+                # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
-                if len(cntCenterHexSimple) < 7:
-                    cv2.drawContours(img, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
-                    cv2.drawContours(img, [np.int32(4.0*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
-                    cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
+
+                # Draw boundaries to potentially detect obstacles
+                #if len(cntCenterHexSimple) < 7:
+                #    cv2.drawContours(img, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
+                #    cv2.drawContours(img, [np.int32(4.0*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
+                #    cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
                 print("Length cntCenterHex: {}".format(len(cntCenterHex)))
             else:
                 print("Center hex not found")
-                
-            
-            
-            # for i in range(len(contours)):
-            #     tempColor = (0, 0, 255)
-            #     if not (contours[i][:]>paddingMax).any():
-            #         if not (contours[i][:]<paddingMin).any():
-            #             if (np.ptp(contours[i], axis=0)[0][0] < 20):
-            #                 tempColor = (0, 255, 0)
-            #                 print (np.ptp(contours[i], axis=0)[0][0])
-            #     cv2.drawContours(img, [contours[i] + [200, 99]], 0, tempColor, 3)
-                
         
+        # Debugging visualization window
         cv2.imshow("FPS Test", img)
-        
-        # if least and haveContours:
-        #     cv2.imwrite("contoured_{}_e_{}.png".format(counter, L_low), img)
-        #     np.savetxt("least_{}.csv".format(counter), contours[least].squeeze(), fmt='%.2f', delimiter=",")
         
         counter += 1
         curr_fps = 1/(time.perf_counter()-now)
         times = np.append(times, curr_fps)
         print("fps: {}".format(curr_fps))
         
+        # Exit on keypress q on imshow window and display success rate of finding player
         if cv2.waitKey(25) & 0xFF == ord("q"):
             cv2.destroyAllWindows()
             print("Success Rate: {}".format((counter-fails)/counter))
