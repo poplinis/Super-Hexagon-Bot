@@ -55,7 +55,7 @@ with mss() as sct:
         # Constantly changing, so a sample of the background is used to determine a thresholding value
         center = (int(screen_cap.shape[0]/2), int(screen_cap.shape[1]/2))
         
-        # Convert frame to grayscale - not sure why i do this before thresholding
+        # Convert frame to grayscale, needs to be done before thresholding because thresholding only works on a 1 channel image
         gray = cv2.cvtColor(screen_cap, cv2.COLOR_BGR2GRAY)
 
         # Apply Gaussian blur, potentially helps with edge detection
@@ -75,7 +75,7 @@ with mss() as sct:
         # Find contours in image, used to detect the player and obstacles
         contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                 
-        # TODO: What does this do?
+        # Convert this image back to color so that the contours can be visualized in color
         img = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR)
 
         haveContours = len(contours)>0
