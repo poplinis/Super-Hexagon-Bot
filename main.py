@@ -156,15 +156,16 @@ with mss() as sct:
 
                 # Draw boundaries to potentially detect obstacles
                 if len(cntCenterHexSimple) < 7:
-                    cv2.drawContours(img, [np.int32((cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
-                #    cv2.drawContours(img, [np.int32(4.0*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
-                #    cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), 3)
+                    cv2.drawContours(img, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=5)
+                    cv2.drawContours(img, [np.int32(4.3*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=5)
+                    cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=5)
                 print("Length cntCenterHex: {}".format(len(cntCenterHex)))
             else:
                 print("Center hex not found")
         
         # Debugging visualization window
         cv2.imshow("FPS Test", img)
+        cv2.imshow("Binarized", thresh1)
         
         counter += 1
         curr_fps = 1/(time.perf_counter()-now)
