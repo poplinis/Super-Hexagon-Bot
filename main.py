@@ -163,7 +163,19 @@ with mss() as sct:
                 epsHex = 0.03*cv2.arcLength(cntCenterHex, True)
                 # Simplify contour of center hexagon
                 cntCenterHexSimple = cv2.approxPolyDP(cntCenterHex, epsHex, True)
-                
+                cntCenterHexSimple = np.squeeze(cntCenterHexSimple)
+
+                # Find the midpoints of each side of the simplified center hex
+                midpoints = np.zeros_like(cntCenterHexSimple)
+                print(np.shape(cntCenterHexSimple))
+                take_range = range(1, len(cntCenterHexSimple)+1)
+                midpoints[:, 0] = (cntCenterHexSimple[:, 0] + np.take(cntCenterHexSimple[:, 0], take_range, mode='wrap')) / 2.0
+                midpoints[:, 1] = (cntCenterHexSimple[:, 1] + np.take(cntCenterHexSimple[:, 1], take_range, mode='wrap')) / 2.0
+
+                # Draw circles at the midpoints
+                for i in range(len(midpoints)):
+                    cv2.circle(img, (midpoints[i, :]), 4, (0, 255, 0), -1)
+
                 # Use image moments fo find the center of the hexagon
                 M = cv2.moments(cntCenterHex)
                 cX = int(M["m10"] / M["m00"])
@@ -173,46 +185,6 @@ with mss() as sct:
                 # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
 
-
-                # Draw boundaries to potentially detect obstacles
-                # I don't think this method is going to work, makes it too difficult to actually navigate. Better plan is probably to send out
-                # Lines from the center then put together a map of which lanes are free at a given distance then based on that generate a path to follow.
-                if len(cntCenterHexSimple) < 7:
-                    boundary_thickness = 30
-
-                    # Draw boundaries on debug imshow for visualization
-                    cv2.drawContours(img, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-                    cv2.drawContours(img, [np.int32(4.3*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-                    cv2.drawContours(img, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-
-                    # Create masks for searching for openings
-                    boundary1 = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR) * 0
-                    boundary2 = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR) * 0
-                    boundary3 = cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR) * 0
-                    # Transfer each boundary contour to the boundary image, drawContours only works on 3 channel images
-                    cv2.drawContours(boundary1, [np.int32(2.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-                    cv2.drawContours(boundary2, [np.int32(4.3*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-                    cv2.drawContours(boundary3, [np.int32(6.5*(cntCenterHexSimple-(cX, cY))+(cX, cY))], 0, (0, 255, 0), thickness=boundary_thickness)
-                    # Convert back to binarized form
-                    boundary1 = cv2.cvtColor(boundary1, cv2.COLOR_BGR2GRAY)
-                    boundary2 = cv2.cvtColor(boundary2, cv2.COLOR_BGR2GRAY)
-                    boundary3 = cv2.cvtColor(boundary3, cv2.COLOR_BGR2GRAY)
-                    boundary1[boundary1>0] = 255
-                    boundary2[boundary2>0] = 255
-                    boundary3[boundary3>0] = 255
-                    
-                    # Detect collisions between the boundary rings and obstacles
-                    boundary1 = cv2.bitwise_and(boundary1, thresh1)
-                    boundary2 = cv2.bitwise_and(boundary2, thresh1)
-                    boundary3 = cv2.bitwise_and(boundary3, thresh1)
-
-                    # Compose the results for visualization
-                    all_boundaries = cv2.bitwise_or(boundary1, boundary2)
-                    all_boundaries = cv2.bitwise_or(all_boundaries, boundary3)
-                    cv2.imshow("all", all_boundaries)
-
-
-
                 print("Length cntCenterHex: {}".format(len(cntCenterHex)))
             else:
                 print("Center hex not found")
@@ -220,9 +192,6 @@ with mss() as sct:
         # Debugging visualization window
         cv2.imshow("FPS Test", img)
         cv2.imshow("Binarized", thresh1)
-        cv2.imshow("Det ring 1", boundary1)
-        cv2.imshow("Det ring 2", boundary2)
-        cv2.imshow("Det ring 3", boundary3)
         
         counter += 1
         curr_fps = 1/(time.perf_counter()-now)
