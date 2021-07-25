@@ -183,8 +183,10 @@ with mss() as sct:
                 print("Center at ({}, {})".format(cX, cY))
 
                 # Draw lines radiating out from center passing through midpoints
+                # Also create a mask to search each 'lane' for obstacles
                 # This method strikes me as less than optimal, Maybe polar or parametric
                 # coordinate approach would be better?
+                maskLanes = np.array(len(midpoints)*[np.zeros((np.shape(img)[0], np.shape(img)[1]), dtype=np.uint8)])
                 for i in range(len(midpoints)):
                     mX = midpoints[i, 0]
                     mY = midpoints[i, 1]
@@ -199,7 +201,12 @@ with mss() as sct:
                         tempX = 1000 * (1 - (2 * (mX < cX))) # If mX is less than cX (to the left of it), then go in the negative direction
                         tempY = int(tempSlope * tempX + tempIntercept)
 
-                    cv2.line(img, (cX, cY), (tempX, tempY), (0, 255, 0), 3)
+                    startPoint = (cX, cY)
+                    endPoint = (tempX, tempY)
+                    cv2.line(img, startPoint, endPoint, (0, 255, 0), 3)
+                    cv2.line(maskLanes[i], startPoint, endPoint, 255, 3)
+                    # TODO: Mask out player and center hex before detecting obstacles
+                    cv2.bitwise_and(thresh1, maskLanes[i], maskLanes[i])
 
                 # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
@@ -211,6 +218,10 @@ with mss() as sct:
         # Debugging visualization window
         cv2.imshow("FPS Test", img)
         cv2.imshow("Binarized", thresh1)
+        obstacles = np.zeros_like(maskLanes[0])
+        for i in range(len(maskLanes)):
+            cv2.bitwise_or(obstacles, maskLanes[i], obstacles)
+        cv2.imshow("Obstacles", obstacles)
         
         counter += 1
         curr_fps = 1/(time.perf_counter()-now)
