@@ -182,6 +182,25 @@ with mss() as sct:
                 cY = int(M["m01"] / M["m00"])
                 print("Center at ({}, {})".format(cX, cY))
 
+                # Draw lines radiating out from center passing through midpoints
+                # This method strikes me as less than optimal, Maybe polar or parametric
+                # coordinate approach would be better?
+                for i in range(len(midpoints)):
+                    mX = midpoints[i, 0]
+                    mY = midpoints[i, 1]
+
+                    if mX == cX: #straight up or straight down (undefined slope)
+                        tempX = cX
+                        tempY = 1000 * -1 * (mY > cY)
+                    else:
+                        tempSlope = (mY-cY)/(mX-cX)
+                        tempIntercept = cY - tempSlope * cX
+
+                        tempX = 1000 * (1 - (2 * (mX < cX))) # If mX is less than cX (to the left of it), then go in the negative direction
+                        tempY = int(tempSlope * tempX + tempIntercept)
+
+                    cv2.line(img, (cX, cY), (tempX, tempY), (0, 255, 0), 3)
+
                 # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
 
