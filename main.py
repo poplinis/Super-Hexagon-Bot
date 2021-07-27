@@ -148,8 +148,12 @@ with mss() as sct:
                 
                 # Use image moments to find the center of the player
                 M = cv2.moments(contour_player)
-                cX = int(M["m10"] / M["m00"])
-                cY = int(M["m01"] / M["m00"])
+                if int(M["m00"]) == 0:
+                    cX = 0
+                    cY = 0
+                else:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
                 print("Player at ({}, {})".format(cX, cY))
                 print("Length contour_player: {}".format(len(contour_player)))
             else:
@@ -178,8 +182,12 @@ with mss() as sct:
 
                 # Use image moments fo find the center of the hexagon
                 M = cv2.moments(cntCenterHex)
-                cX = int(M["m10"] / M["m00"])
-                cY = int(M["m01"] / M["m00"])
+                if int(M["m00"]) == 0:
+                    cX = 0
+                    cY = 0
+                else:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
                 print("Center at ({}, {})".format(cX, cY))
 
                 # Draw lines radiating out from center passing through midpoints
@@ -206,10 +214,23 @@ with mss() as sct:
                     cv2.line(img, startPoint, endPoint, (0, 255, 0), 3)
                     cv2.line(maskLanes[i], startPoint, endPoint, 255, 3)
                     # TODO: Mask out player and center hex before detecting obstacles
+                    obstacleMask = np.zeros((np.shape(img)[0], np.shape(img)[1]), dtype=np.uint8) 
+                    #cv2.fillPoly(obstacleMask, contour_player, 255)
+                    #cv2.fillPoly(obstacleMask, cntCenterHex, 255)
+                    cv2.drawContours(obstacleMask, [contour_player], -1, 255, thickness=cv2.FILLED)
+                    cv2.drawContours(obstacleMask, [cntCenterHex], -1, 255, thickness=15)
+                    cv2.imshow("obstacle mask", obstacleMask)
+                    thresh1 = cv2.bitwise_and(thresh1, cv2.bitwise_not(obstacleMask))
                     cv2.bitwise_and(thresh1, maskLanes[i], maskLanes[i])
 
                 # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
+                obstacles = np.zeros_like(maskLanes[0])
+                for i in range(len(maskLanes)):
+                    cv2.bitwise_or(obstacles, maskLanes[i], obstacles)
+                cv2.drawContours(obstacles, [contour_player], -1, 255, thickness=cv2.FILLED)
+                cv2.imshow("Obstacles", obstacles)
+
 
                 print("Length cntCenterHex: {}".format(len(cntCenterHex)))
             else:
@@ -218,10 +239,6 @@ with mss() as sct:
         # Debugging visualization window
         cv2.imshow("FPS Test", img)
         cv2.imshow("Binarized", thresh1)
-        obstacles = np.zeros_like(maskLanes[0])
-        for i in range(len(maskLanes)):
-            cv2.bitwise_or(obstacles, maskLanes[i], obstacles)
-        cv2.imshow("Obstacles", obstacles)
         
         counter += 1
         curr_fps = 1/(time.perf_counter()-now)
