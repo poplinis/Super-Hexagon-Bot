@@ -209,22 +209,27 @@ with mss() as sct:
                         tempX = 1000 * (1 - (2 * (mX < cX))) # If mX is less than cX (to the left of it), then go in the negative direction
                         tempY = int(tempSlope * tempX + tempIntercept)
 
+                    # Draw obstacle detection lines
                     startPoint = (cX, cY)
                     endPoint = (tempX, tempY)
                     cv2.line(img, startPoint, endPoint, (0, 255, 0), 3)
                     cv2.line(maskLanes[i], startPoint, endPoint, 255, 3)
-                    # TODO: Mask out player and center hex before detecting obstacles
+
+                    # Mask out player and center hex before detecting obstacles
                     obstacleMask = np.zeros((np.shape(img)[0], np.shape(img)[1]), dtype=np.uint8) 
-                    #cv2.fillPoly(obstacleMask, contour_player, 255)
-                    #cv2.fillPoly(obstacleMask, cntCenterHex, 255)
                     cv2.drawContours(obstacleMask, [contour_player], -1, 255, thickness=cv2.FILLED)
                     cv2.drawContours(obstacleMask, [cntCenterHex], -1, 255, thickness=15)
-                    cv2.imshow("obstacle mask", obstacleMask)
+
+                    cv2.imshow("obstacle mask", obstacleMask) # Debug visualization
+
+                    # Detect obstacles (intersections between thresh1 and maskLanse)
                     thresh1 = cv2.bitwise_and(thresh1, cv2.bitwise_not(obstacleMask))
                     cv2.bitwise_and(thresh1, maskLanes[i], maskLanes[i])
 
                 # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
+
+                # Draw the combined obstacle detection image
                 obstacles = np.zeros_like(maskLanes[0])
                 for i in range(len(maskLanes)):
                     cv2.bitwise_or(obstacles, maskLanes[i], obstacles)
