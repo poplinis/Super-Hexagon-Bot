@@ -154,10 +154,11 @@ with mss() as sct:
                 else:
                     cX = int(M["m10"] / M["m00"])
                     cY = int(M["m01"] / M["m00"])
-                print("Player at ({}, {})".format(cX, cY))
-                print("Length contour_player: {}".format(len(contour_player)))
+                playerCoords = np.array([cX, cY])
+                #print("Player at ({}, {})".format(cX, cY))
+                #print("Length contour_player: {}".format(len(contour_player)))
             else:
-                print("Player Not Found")
+                #print("Player Not Found")
                 fails += 1
             
             if type(centerHex) != bool:
@@ -171,7 +172,6 @@ with mss() as sct:
 
                 # Find the midpoints of each side of the simplified center hex
                 midpoints = np.zeros_like(cntCenterHexSimple)
-                print(np.shape(cntCenterHexSimple))
                 take_range = range(1, len(cntCenterHexSimple)+1)
                 midpoints[:, 0] = (cntCenterHexSimple[:, 0] + np.take(cntCenterHexSimple[:, 0], take_range, mode='wrap')) / 2.0
                 midpoints[:, 1] = (cntCenterHexSimple[:, 1] + np.take(cntCenterHexSimple[:, 1], take_range, mode='wrap')) / 2.0
@@ -198,6 +198,9 @@ with mss() as sct:
                 for i in range(len(midpoints)):
                     mX = midpoints[i, 0]
                     mY = midpoints[i, 1]
+
+                    # Label the lanes on the debug image
+                    cv2.putText(img, str(i), (mX, mY), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,255), 2)
 
                     if mX == cX: #straight up or straight down (undefined slope)
                         tempX = cX
@@ -226,6 +229,15 @@ with mss() as sct:
                     thresh1 = cv2.bitwise_and(thresh1, cv2.bitwise_not(obstacleMask))
                     cv2.bitwise_and(thresh1, maskLanes[i], maskLanes[i])
 
+                # Determine what lane the player is in
+                playerLane = None
+                minDist = 50000
+                for i in range(len(midpoints)):
+                    currDist = np.linalg.norm(midpoints[i] - playerCoords)
+                    if currDist < minDist:
+                        minDist = currDist
+                        playerLane = i
+
                 # Draw circle at detected center
                 cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
 
@@ -237,9 +249,10 @@ with mss() as sct:
                 cv2.imshow("Obstacles", obstacles)
 
 
-                print("Length cntCenterHex: {}".format(len(cntCenterHex)))
+                #print("Length cntCenterHex: {}".format(len(cntCenterHex)))
             else:
-                print("Center hex not found")
+                #print("Center hex not found")
+                pass
         
         # Debugging visualization window
         cv2.imshow("FPS Test", img)
