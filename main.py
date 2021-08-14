@@ -229,11 +229,19 @@ with mss() as sct:
                     thresh1 = cv2.bitwise_and(thresh1, cv2.bitwise_not(obstacleMask))
                     cv2.bitwise_and(thresh1, maskLanes[i], maskLanes[i])
 
-                    # Detect obstacles in each lane
-                    for i in range(len(maskLanes)):
-                        obstacleContours, hierarchy = cv2.findContours(maskLanes[i], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                        # TODO: Get distances to each obstacle
-                        print("{} obstacles found in lane {}".format(len(obstacleContours), i))
+                obstacleDistances = []
+
+                # Detect obstacles in each lane
+                for i in range(len(maskLanes)):
+                    obstacleDistances.append([])
+                    obstacleContours, hierarchy = cv2.findContours(maskLanes[i], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                    # Determine distances to each obstacle
+                    if len(obstacleContours) > 0:
+                        for j in range(len(obstacleContours)):
+                            currDist = np.min(np.linalg.norm(obstacleContours[j] - midpoints[i, :]))
+                            obstacleDistances[i].append(int(currDist))
+
+                print("Distances: ", obstacleDistances)
 
                 # Determine what lane the player is in
                 playerLane = None
