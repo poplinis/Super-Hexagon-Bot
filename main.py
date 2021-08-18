@@ -5,9 +5,29 @@ import time
 import os
 
 import win32api
+import win32gui
 
+# Function to bring the super hexagon game window to the foreground, needed so keyevents
+# take place correctly. Should be called close to startup. Doesn't work (yet) if window
+# is minimized
+def activateSuperHexagon():
+    win32gui.SetForegroundWindow(win32gui.FindWindow(None, "Super Hexagon"))
+
+# Functions to control the player's movement. Left is defined as counter-clockwise
+# and Right is defined as clockwise
+# Reference: https://gist.github.com/chriskiehl/2906125
+def moveLeft():
+    win32api.keybd_event(ord("A"))
+    time.sleep(0.1)
+    win32api.keybd_event(ord("A"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
+
+def moveRight():
+    win32api.keybd_event(ord("D"))
+    time.sleep(0.1)
+    win32api.keybd_event(ord("D"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
 
 os.chdir(".\\pics")
+activateSuperHexagon()
 
 # TODO: Find actual center
 # TODO: Analyze cases where it fails to locate player
@@ -288,14 +308,3 @@ with mss() as sct:
     cv2.destroyAllWindows()
     np.savetxt("fps_benchmark.csv", times, delimiter="\n")
     
-    # Functions to control the player's movement. Left is defined as counter-clockwise
-    # and Right is defined as clockwise
-    def moveLeft():
-       win32api.keybd_event(ord("A"))
-       time.sleep(0.1)
-       win32api.keybd_event(ord("A"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
-
-    def moveRight():
-       win32api.keybd_event(ord("D"))
-       time.sleep(0.1)
-       win32api.keybd_event(ord("D"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
