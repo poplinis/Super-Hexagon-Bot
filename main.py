@@ -4,6 +4,8 @@ from mss import mss
 import time
 import os
 
+import win32api
+
 
 os.chdir(".\\pics")
 
@@ -286,4 +288,14 @@ with mss() as sct:
     cv2.destroyAllWindows()
     np.savetxt("fps_benchmark.csv", times, delimiter="\n")
     
-    
+    # Functions to control the player's movement. Left is defined as counter-clockwise
+    # and Right is defined as clockwise
+    def moveLeft():
+       win32api.keybd_event(ord("A"))
+       time.sleep(0.1)
+       win32api.keybd_event(ord("A"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
+
+    def moveRight():
+       win32api.keybd_event(ord("D"))
+       time.sleep(0.1)
+       win32api.keybd_event(ord("D"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
