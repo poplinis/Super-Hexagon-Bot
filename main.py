@@ -26,6 +26,45 @@ def moveRight():
     time.sleep(0.1)
     win32api.keybd_event(ord("D"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
 
+def init():
+    pass
+
+def screenCap():
+    pass
+
+def getThresholdImage():
+    pass
+
+def getContours():
+    pass 
+
+def findPlayer():
+    pass 
+
+def getPlayerCoords():
+    pass 
+
+def findCenterHex():
+    pass 
+
+def getCenterHexCoords():
+    pass
+
+def getLaneMidpoints():
+    pass 
+
+def getObstacleImages():
+    pass
+
+def getObstacleDistances():
+    pass
+
+def showImages():
+    pass
+
+def main():
+    pass
+
 os.chdir(".\\pics")
 activateSuperHexagon()
 
