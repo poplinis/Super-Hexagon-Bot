@@ -71,22 +71,21 @@ activateSuperHexagon()
 # TODO: Find actual center
 # TODO: Analyze cases where it fails to locate player
 
-# List of color codes to pull from
-colors = [(255, 0, 0),
-          (0, 255, 0),
-          (0, 0, 255),
-          (255, 255, 0),
-          (0, 255, 255),
-          (255, 0, 255),
-          (128, 128, 0),
-          (128, 0, 128),
-          (0, 128, 128),
-          (255, 128, 128),
-          (128, 255, 128),
-          (128, 128, 255),
-          (255, 255, 128),
-          (255, 128, 255),
-          (128, 255, 255)]
+# Dictionary of color codes to pull from, uses BGR to match OpenCV
+colors = {'Blue' : (255, 0, 0),
+          'Green' : (0, 255, 0),
+          'Red' : (0, 0, 255),
+          'LightBlue' : (255, 255, 0),
+          'Yellow' : (0, 255, 255),
+          'Pink' : (255, 0, 255),
+          'Teal' : (128, 128, 0),
+          'Purple' : (128, 0, 128),
+          'Gold' : (0, 128, 128),
+          'Cornflower' : (255, 128, 128),
+          'LightGreen' : (128, 255, 128),
+          'LightRed' : (128, 128, 255),
+          'SkyBlue' : (255, 255, 128),
+          'LightPink' : (255, 128, 255)}
 
 with mss() as sct:
     monitor_num = 1
@@ -152,16 +151,16 @@ with mss() as sct:
             # Vertical limits on searching for the player
             # TODO: Make these not magic numbers
             playerLimitBottom = 275
-            cv2.line(img, (0, playerLimitBottom), (monitor["width"], playerLimitBottom), colors[0])
+            cv2.line(img, (0, playerLimitBottom), (monitor["width"], playerLimitBottom), colors['Blue'])
             playerLimitTop = 105
-            cv2.line(img, (0, playerLimitTop), (monitor["width"], playerLimitTop), colors[0])
+            cv2.line(img, (0, playerLimitTop), (monitor["width"], playerLimitTop), colors['Blue'])
             
             # Vertical limits on searching for the center hexagon
             # TODO: Make these not magic numbers
             centerHexLimitBottom = 245
-            cv2.line(img, (0, centerHexLimitBottom), (monitor["width"], centerHexLimitBottom), colors[3])
+            cv2.line(img, (0, centerHexLimitBottom), (monitor["width"], centerHexLimitBottom), colors['LightBlue'])
             centerHexLimitTop = 135
-            cv2.line(img, (0, centerHexLimitTop), (monitor["width"], centerHexLimitTop), colors[3])
+            cv2.line(img, (0, centerHexLimitTop), (monitor["width"], centerHexLimitTop), colors['LightBlue'])
             
             # Height method
             # Attempt to detect the player and the center hexagon based on their size
