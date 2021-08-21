@@ -130,6 +130,7 @@ def findPlayer(contours):
 # Returns the xy coords of the centerHex if found, otherwise returns false
 # Also returns the simple contours for the midpoint function to use
 def findCenterHex(contours):
+    centerHex = False
     centerHexLimitBottom = 245
     centerHexLimitTop = 135
 
@@ -183,7 +184,7 @@ def getLaneMidpoints(cntCenterHexSimple):
     midpoints[:, 1] = (cntCenterHexSimple[:, 1] + np.take(cntCenterHexSimple[:, 1], take_range, mode='wrap')) / 2.0
     return midpoints
 
-def getObstacleImages(midpoints, center, img, contour_player, contour_centerHex):
+def getObstacleImages(midpoints, center, img, contour_player, contour_centerHex, thresh1):
     cX, cY = center
 
     # Draw lines radiating out from center passing through midpoints
@@ -227,11 +228,32 @@ def getObstacleImages(midpoints, center, img, contour_player, contour_centerHex)
     
     return maskLanes
 
-def getObstacleDistances():
-    pass
+def getObstacleDistances(maskLanes, midpoints):
+    # Detect obstacles in each lane
+    obstacleDistances = []
+    for i in range(len(maskLanes)):
+        obstacleDistances.append([])
+        obstacleContours, hierarchy = cv2.findContours(maskLanes[i], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Determine distances to each obstacle
+        if len(obstacleContours) > 0:
+            for j in range(len(obstacleContours)):
+                currDist = np.min(np.linalg.norm(obstacleContours[j] - midpoints[i, :]))
+                obstacleDistances[i].append(int(currDist))
 
-def getPlayerLane():
-    pass
+    print("Distances: ", obstacleDistances)
+    return obstacleDistances
+
+def getPlayerLane(playerCoords, midpoints):
+    # Determine what lane the player is in
+    playerLane = None
+    minDist = 50000
+    for i in range(len(midpoints)):
+        currDist = np.linalg.norm(midpoints[i] - playerCoords)
+        if currDist < minDist:
+            minDist = currDist
+            playerLane = i
+    print("Player in lane ", playerLane)
+    return playerLane
 
 def showImages():
     pass
@@ -245,6 +267,7 @@ def main():
     times = np.array([])    
 
     counter = 1
+    global fails
     fails = 0
 
     playing = True
@@ -288,82 +311,54 @@ def main():
             # If contours exist in the image (make sure we don't try to access an invalid element)
             if len(contours) > 0:
                 player, playerContours = findPlayer(contours)
-                if not player:
+                if type(player) == bool:
                     continue # Skip this iteration if the player isn't found
 
                 centerHex, centerHexSimpleContours = findCenterHex(contours)
-                if not centerHex:
-                    continue
+                if type(centerHex) == bool:
+                    continue # Skip this iteration if the centerHex isn't found
 
                 laneMidpoints = getLaneMidpoints(centerHexSimpleContours)
 
-                obstacleImages = getObstacleImages(laneMidpoints, centerHex, img, playerContours, centerHexSimpleContours)
+                obstacleImages = getObstacleImages(laneMidpoints, centerHex, img, playerContours, centerHexSimpleContours, thresh1)
+
+                obstacleDistances = getObstacleDistances(obstacleImages, laneMidpoints)
+
+                playerLane = getPlayerLane(player, laneMidpoints)
 
 
 
-        
+            # Draw circle at detected center
+            cv2.circle(img, centerHex, 4, (0, 255, 0), -1)
+
+            # Draw the combined obstacle detection image
+            obstacles = np.zeros_like(obstacleImages[0])
+            for i in range(len(obstacleImages)):
+                cv2.bitwise_or(obstacles, obstacleImages[i], obstacles)
+            cv2.drawContours(obstacles, [playerContours], -1, 255, thickness=cv2.FILLED)
+            cv2.imshow("Obstacles", obstacles)
 
 
-
-
-
-
-
-
-                obstacleDistances = []
-
-                # Detect obstacles in each lane
-                for i in range(len(maskLanes)):
-                    obstacleDistances.append([])
-                    obstacleContours, hierarchy = cv2.findContours(maskLanes[i], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                    # Determine distances to each obstacle
-                    if len(obstacleContours) > 0:
-                        for j in range(len(obstacleContours)):
-                            currDist = np.min(np.linalg.norm(obstacleContours[j] - midpoints[i, :]))
-                            obstacleDistances[i].append(int(currDist))
-
-                print("Distances: ", obstacleDistances)
-
-                # Determine what lane the player is in
-                playerLane = None
-                minDist = 50000
-                for i in range(len(midpoints)):
-                    currDist = np.linalg.norm(midpoints[i] - playerCoords)
-                    if currDist < minDist:
-                        minDist = currDist
-                        playerLane = i
-
-                # Draw circle at detected center
-                cv2.circle(img, (cX, cY), 4, (0, 255, 0), -1)
-
-                # Draw the combined obstacle detection image
-                obstacles = np.zeros_like(maskLanes[0])
-                for i in range(len(maskLanes)):
-                    cv2.bitwise_or(obstacles, maskLanes[i], obstacles)
-                cv2.drawContours(obstacles, [contour_player], -1, 255, thickness=cv2.FILLED)
-                cv2.imshow("Obstacles", obstacles)
-
-
-                #print("Length cntCenterHex: {}".format(len(cntCenterHex)))
-            else:
-                #print("Center hex not found")
-                pass
-        
-        # Debugging visualization window
-        cv2.imshow("FPS Test", img)
-        cv2.imshow("Binarized", thresh1)
-        
-        counter += 1
-        curr_fps = 1/(time.perf_counter()-now)
-        times = np.append(times, curr_fps)
-        print("fps: {}".format(curr_fps))
-        
-        # Exit on keypress q on imshow window and display success rate of finding player
-        if cv2.waitKey(25) & 0xFF == ord("q"):
-            cv2.destroyAllWindows()
-            print("Success Rate: {}".format((counter-fails)/counter))
-            break
+            #print("Length cntCenterHex: {}".format(len(cntCenterHex)))
+    
+            # Debugging visualization window
+            cv2.imshow("FPS Test", img)
+            cv2.imshow("Binarized", thresh1)
+            
+            counter += 1
+            curr_fps = 1/(time.perf_counter()-now)
+            times = np.append(times, curr_fps)
+            print("fps: {}".format(curr_fps))
+            
+            # Exit on keypress q on imshow window and display success rate of finding player
+            if cv2.waitKey(25) & 0xFF == ord("q"):
+                cv2.destroyAllWindows()
+                print("Success Rate: {}".format((counter-fails)/counter))
+                break
         
     cv2.destroyAllWindows()
-    np.savetxt("fps_benchmark.csv", times, delimiter="\n")
+
+
+if __name__ == "__main__":
+    main()
     
