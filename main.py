@@ -44,12 +44,12 @@ def activateSuperHexagon():
 # and Right is defined as clockwise
 # Reference: https://gist.github.com/chriskiehl/2906125
 def moveLeft():
-    win32api.keybd_event(ord("A"))
+    win32api.keybd_event(ord("A"), 0, 0, 0)
     time.sleep(0.1)
     win32api.keybd_event(ord("A"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
 
 def moveRight():
-    win32api.keybd_event(ord("D"))
+    win32api.keybd_event(ord("D"), 0, 0, 0)
     time.sleep(0.1)
     win32api.keybd_event(ord("D"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
 
@@ -255,6 +255,55 @@ def getPlayerLane(playerCoords, midpoints):
     print("Player in lane ", playerLane)
     return playerLane
 
+# Move the player based on info on current location and upcoming obstacles
+def movePlayer(playerLane, obstacleDistances):
+    # Basically 3 cases: move left, move right, or don't move
+
+    # If there's an empty lane, go there:
+    if [] in obstacleDistances:
+        targetLane = obstacleDistances.index([])
+        distances = [(playerLane-targetLane)%6, (playerLane+targetLane)%6]
+        if distances[0] < distances[1]:
+            moveLeft()
+            return
+        elif distances[1] < distances[0]:
+            moveRight()
+            return
+        else: # If equal, go left just because. Eventually this should account for rotation
+            moveLeft()
+            return
+
+
+    # Find the lane of the closest obstacle
+    closestObstacle = 9999 # Start at a magic number that's outside the possible range of values
+    closestObstacleLane = False 
+    for i in range(len(obstacleDistances)):
+        if len(obstacleDistances[i]) > 0:
+            for j in range(len(obstacleDistances[i])):
+                if obstacleDistances[i][j] < closestObstacle:
+                    closestObstacleLane = i
+                    closestObstacle = obstacleDistances[i][j]
+    
+    print("ClosestObstacle: ", closestObstacle)
+    if playerLane == closestObstacleLane:
+        # Going to collide! Need to move left or right
+        # Go to whichever lane has an obstacle that is further away
+        lane2Left = (playerLane-1) % 6
+        lane2Right = (playerLane+1) % 6
+        if obstacleDistances[lane2Left] == []:
+            moveLeft()
+            return
+        elif obstacleDistances[lane2Right] == []:
+            moveRight()
+            return
+        elif min(obstacleDistances[lane2Left]) > min(obstacleDistances[lane2Right]):
+            moveLeft()
+            return
+        else:
+            moveRight()
+            return
+        
+
 def showImages():
     pass
 
@@ -325,6 +374,8 @@ def main():
                 obstacleDistances = getObstacleDistances(obstacleImages, laneMidpoints)
 
                 playerLane = getPlayerLane(player, laneMidpoints)
+
+                movePlayer(playerLane, obstacleDistances)
 
 
 
