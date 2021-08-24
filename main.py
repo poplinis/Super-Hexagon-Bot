@@ -228,6 +228,7 @@ def getObstacleImages(midpoints, center, img, contour_player, contour_centerHex,
     
     return maskLanes
 
+# TODO: Not sure this is working 100% correct
 def getObstacleDistances(maskLanes, midpoints):
     # Detect obstacles in each lane
     obstacleDistances = []
@@ -240,7 +241,7 @@ def getObstacleDistances(maskLanes, midpoints):
                 currDist = np.min(np.linalg.norm(obstacleContours[j] - midpoints[i, :]))
                 obstacleDistances[i].append(int(currDist))
 
-    print("Distances: ", obstacleDistances)
+    #print("Obstacle Distances: ", obstacleDistances)
     return obstacleDistances
 
 def getPlayerLane(playerCoords, midpoints):
@@ -252,57 +253,70 @@ def getPlayerLane(playerCoords, midpoints):
         if currDist < minDist:
             minDist = currDist
             playerLane = i
-    print("Player in lane ", playerLane)
+    #print("Player in lane ", playerLane)
     return playerLane
 
 # Move the player based on info on current location and upcoming obstacles
 def movePlayer(playerLane, obstacleDistances):
-    # Basically 3 cases: move left, move right, or don't move
-
-    # If there's an empty lane, go there:
-    if [] in obstacleDistances:
-        targetLane = obstacleDistances.index([])
-        distances = [(playerLane-targetLane)%6, (playerLane+targetLane)%6]
-        if distances[0] < distances[1]:
-            moveLeft()
-            return
-        elif distances[1] < distances[0]:
-            moveRight()
-            return
-        else: # If equal, go left just because. Eventually this should account for rotation
-            moveLeft()
-            return
-
-
-    # Find the lane of the closest obstacle
-    closestObstacle = 9999 # Start at a magic number that's outside the possible range of values
-    closestObstacleLane = False 
+    # First round each distance to the nearest 25th to account for variance
+    print("Obstacle distances before rounding: ", obstacleDistances)
     for i in range(len(obstacleDistances)):
-        if len(obstacleDistances[i]) > 0:
-            for j in range(len(obstacleDistances[i])):
-                if obstacleDistances[i][j] < closestObstacle:
-                    closestObstacleLane = i
-                    closestObstacle = obstacleDistances[i][j]
-    
-    print("ClosestObstacle: ", closestObstacle)
-    if playerLane == closestObstacleLane:
-        # Going to collide! Need to move left or right
-        # Go to whichever lane has an obstacle that is further away
-        lane2Left = (playerLane-1) % 6
-        lane2Right = (playerLane+1) % 6
-        if obstacleDistances[lane2Left] == []:
+        if obstacleDistances[i] != []:
+            obstacleDistances[i] = list(map(roundTo, obstacleDistances[i], len(obstacleDistances[i])*[100]))
+
+    print("Obstacle distances after rounding: ", obstacleDistances)
+            
+
+    # Go to an empty lane if there is one, otherwise
+    # Go to the lane with the largest minimum obstacle distance, otherwise
+    # TODO: Not sure what the next case is yet
+
+    # Get list of empty lanes
+    emptyLanes = []
+    for i in range(len(obstacleDistances)):
+        if obstacleDistances[i] == []:
+            emptyLanes.append(i)
+
+    # If there is an empty lane
+    if emptyLanes != []:
+        #print("Empty Lanes: ", emptyLanes)
+
+        # Get the distances to each empty lane
+        laneDistances = list(map(playerLaneDistance, emptyLanes, len(emptyLanes)*[playerLane]))
+        list(map(list.sort, laneDistances))
+
+        minLaneDistance = min(laneDistances)
+        targetLane = emptyLanes[laneDistances.index(min(laneDistances))]
+        #print("Target Lane: ", targetLane)
+        #print("ObstacleDistances[targetLane]: ", obstacleDistances[targetLane])
+        #print("Player Lane: ", playerLane)
+
+        #print("Lane Distances: ", laneDistances)
+        #print("Shortest distance to an empty lane is:")
+        #print(minLaneDistance)
+        #print("Which is targetLane of")
+        #print(targetLane)
+
+        # Move the player to the empty lane
+        if minLaneDistance[0] == 0:
+            print("Staying put...")
+        elif minLaneDistance[0] < minLaneDistance[1]:
+            print("Moving left...")
             moveLeft()
-            return
-        elif obstacleDistances[lane2Right] == []:
-            moveRight()
-            return
-        elif min(obstacleDistances[lane2Left]) > min(obstacleDistances[lane2Right]):
-            moveLeft()
-            return
         else:
+            print("Moving right...")
             moveRight()
-            return
-        
+
+# Return the distances between the playerLane and the targetLane, indx 0 is left, indx is right
+def playerLaneDistance(playerLane, targetLane):
+    return [(playerLane-targetLane)%6, (targetLane-playerLane)%6] 
+
+# Determine which direction to go based on a tuple input
+def moveShortDirection(distanceTuple):
+    pass
+
+def roundTo(num, tolerance):
+    return round(num/tolerance)*tolerance
 
 def showImages():
     pass
@@ -386,7 +400,8 @@ def main():
             obstacles = np.zeros_like(obstacleImages[0])
             for i in range(len(obstacleImages)):
                 cv2.bitwise_or(obstacles, obstacleImages[i], obstacles)
-            cv2.drawContours(obstacles, [playerContours], -1, 255, thickness=cv2.FILLED)
+            if type(playerContours) != type(None):
+                cv2.drawContours(obstacles, [playerContours], -1, 255, thickness=cv2.FILLED)
             cv2.imshow("Obstacles", obstacles)
 
 
