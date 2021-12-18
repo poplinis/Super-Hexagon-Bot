@@ -283,7 +283,8 @@ def movePlayer(playerLane, obstacleDistances):
         #print("Empty Lanes: ", emptyLanes)
 
         # Get the distances to each empty lane
-        laneDistances = list(map(playerLaneDistance, emptyLanes, len(emptyLanes)*[playerLane]))
+        laneDistances = list(map(playerLaneDistance, len(emptyLanes)*[playerLane]), emptyLanes)
+        print("Distance to each lane: ", laneDistances)
         list(map(list.sort, laneDistances))
 
         minLaneDistance = min(laneDistances)
