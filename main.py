@@ -268,6 +268,7 @@ def movePlayer(playerLane, obstacleDistances):
     print("Obstacle distances after rounding: ", obstacleDistances)
             
 
+    # If in an empty lane, stay there, otherwise
     # Go to an empty lane if there is one, otherwise
     # Go to the lane with the largest minimum obstacle distance, otherwise
     # TODO: Not sure what the next case is yet
@@ -285,31 +286,57 @@ def movePlayer(playerLane, obstacleDistances):
         # Get the distances to each empty lane
         laneDistances = list(map(playerLaneDistance, len(emptyLanes)*[playerLane], emptyLanes))
         print("Distance to each lane: ", laneDistances)
-        list(map(list.sort, laneDistances))
+        laneDistances = np.array(laneDistances)
+        targetLoc = np.unravel_index(laneDistances.argmin(), laneDistances.shape) 
+        #list(map(list.sort, laneDistances))
 
-        minLaneDistance = min(laneDistances)
-        targetLane = emptyLanes[laneDistances.index(min(laneDistances))]
+        #minLaneDistance = min(laneDistances)
+        targetLane = emptyLanes[targetLoc[0]]
+
         print("Target Lane: ", targetLane)
         #print("ObstacleDistances[targetLane]: ", obstacleDistances[targetLane])
         print("Player Lane: ", playerLane)
-
-        #print("Lane Distances: ", laneDistances)
-        #print("Shortest distance to an empty lane is:")
-        #print(minLaneDistance)
-        #print("Which is targetLane of")
-        #print(targetLane)
-
-        # Move the player to the empty lane
-        if minLaneDistance[0] == 0:
+        # Move to it 
+        if targetLane == playerLane:
             print("Staying put...")
-        elif minLaneDistance[0] < minLaneDistance[1]:
+        elif targetLoc[1] == 0:
             print("Moving counter-clockwise...")
             moveLeft()
         else:
             print("Moving clockwise...")
             moveRight()
+    # Move the player to the closest lane w/ obstacle dist > 800
+    else:
+        # Identify possible target lanes
+        candidateLanes = []
+        for i in range(len(obstacleDistances)):
+            if obstacleDistances[i][0] >= 800:
+                candidateLanes.append(i) 
+        if candidateLanes != []:
+            # Find the closest one
+            laneDistances = list(map(playerLaneDistance, len(candidateLanes)*[playerLane], candidateLanes))
+            print("Distance to each lane: ", laneDistances)
+            laneDistances = np.array(laneDistances)
+            targetLoc = np.unravel_index(laneDistances.argmin(), laneDistances.shape) 
+            #list(map(list.sort, laneDistances))
 
-# Return the distances between the playerLane and the targetLane, indx 0 is left, indx is right
+            #minLaneDistance = min(laneDistances)
+            targetLane = candidateLanes[targetLoc[0]]
+
+            print("Target Lane: ", targetLane)
+            #print("ObstacleDistances[targetLane]: ", obstacleDistances[targetLane])
+            print("Player Lane: ", playerLane)
+            # Move to it 
+            if targetLane == playerLane:
+                print("Staying put...")
+            elif targetLoc[1] == 0:
+                print("Moving counter-clockwise...")
+                moveLeft()
+            else:
+                print("Moving clockwise...")
+                moveRight()
+
+# Return the distances between the playerLane and the targetLane, indx 0 is counter-clockwise distance, indx 1 is clockwise distance
 def playerLaneDistance(playerLane, targetLane):
     return [(playerLane-targetLane)%6, (targetLane-playerLane)%6] 
 
