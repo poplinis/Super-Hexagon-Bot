@@ -43,12 +43,12 @@ def activateSuperHexagon():
 # Functions to control the player's movement. Left is defined as counter-clockwise
 # and Right is defined as clockwise
 # Reference: https://gist.github.com/chriskiehl/2906125
-def moveLeft():
+def moveLeft(): # aka counter-clockwise
     win32api.keybd_event(ord("A"), 0, 0, 0)
     time.sleep(0.1)
     win32api.keybd_event(ord("A"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
 
-def moveRight():
+def moveRight(): # aka clockwise
     win32api.keybd_event(ord("D"), 0, 0, 0)
     time.sleep(0.1)
     win32api.keybd_event(ord("D"), 0, 2, 0) # 2 = win32con.KEYEVENTF_KEYUP
@@ -242,6 +242,7 @@ def getObstacleDistances(maskLanes, midpoints):
                 obstacleDistances[i].append(int(currDist))
 
     #print("Obstacle Distances: ", obstacleDistances)
+    list(map(list.sort, obstacleDistances[:]))
     return obstacleDistances
 
 def getPlayerLane(playerCoords, midpoints):
@@ -287,9 +288,9 @@ def movePlayer(playerLane, obstacleDistances):
 
         minLaneDistance = min(laneDistances)
         targetLane = emptyLanes[laneDistances.index(min(laneDistances))]
-        #print("Target Lane: ", targetLane)
+        print("Target Lane: ", targetLane)
         #print("ObstacleDistances[targetLane]: ", obstacleDistances[targetLane])
-        #print("Player Lane: ", playerLane)
+        print("Player Lane: ", playerLane)
 
         #print("Lane Distances: ", laneDistances)
         #print("Shortest distance to an empty lane is:")
@@ -301,10 +302,10 @@ def movePlayer(playerLane, obstacleDistances):
         if minLaneDistance[0] == 0:
             print("Staying put...")
         elif minLaneDistance[0] < minLaneDistance[1]:
-            print("Moving left...")
+            print("Moving counter-clockwise...")
             moveLeft()
         else:
-            print("Moving right...")
+            print("Moving clockwise...")
             moveRight()
 
 # Return the distances between the playerLane and the targetLane, indx 0 is left, indx is right
@@ -339,6 +340,7 @@ def main():
         mon = sct.monitors[monitor_num]
         
         # Define capture area
+        # TODO: What are these magic numbers? This'll be fun to figure out
         monitor = {
             'top': mon['top']+30+50,
             'left': mon['left']+1+95,
